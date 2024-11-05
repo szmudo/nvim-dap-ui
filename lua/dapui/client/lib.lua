@@ -20,7 +20,7 @@ return function(client)
       if (source.sourceReference or 0) > 0 then
         local buf = nio.api.nvim_create_buf(false, true)
         local response = client.request.source({ sourceReference = source.sourceReference })
-        if not response.content then
+        if not response or not response.content then
           util.notify("No source available for frame", vim.log.levels.WARN)
           return
         end
