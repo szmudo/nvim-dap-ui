@@ -1,66 +1,18 @@
 local util = require("dapui.util")
 local nio = require("nio")
 
-local mime_to_filetype = {
-  ["text/javascript"] = "javascript",
-}
-
 ---@param client dapui.DAPClient
 return function(client)
   ---@class dapui.DAPClientLib
   local client_lib = {}
 
-  local function open(frame, set_frame)
-    local opened = (function()
-      local line = frame.line
-      local column = frame.column
-      local source = frame.source
-      if not source then
-        return
-      end
-
-      if (source.sourceReference or 0) > 0 then
-        local response = client.request.source({ sourceReference = source.sourceReference })
-        if not response or not response.content then
-          util.notify(
-            "No source available for frame: " .. source.sourceReference,
-            vim.log.levels.WARN
-          )
-          return
-        end
-        local buf = nio.api.nvim_create_buf(false, true)
-        local filetype = mime_to_filetype[response.mimeType]
-        nio.api.nvim_buf_set_lines(buf, 0, 0, true, vim.split(response.content, "\n"))
-        if filetype then
-          vim.api.nvim_buf_set_option(buf, "filetype", filetype)
-        end
-        nio.api.nvim_buf_set_option(buf, "bufhidden", "delete")
-        nio.api.nvim_buf_set_option(buf, "modifiable", false)
-        nio.api.nvim_buf_set_var(buf, "dap_source_buf", true)
-        util.notify("Opening source for frame: " .. source.sourceReference, vim.log.levels.INFO)
-        return util.open_source_buf(buf, line, column)
-      end
-
-      if not source.path then
-        util.notify("No source available for frame", vim.log.levels.WARN)
-      end
-
-      local path = source.path
-
-      if not column or column == 0 then
-        column = 1
-      end
-
-      local bufnr = vim.uri_to_bufnr(
-        util.is_uri(path) and path or vim.uri_from_fname(vim.fn.fnamemodify(path, ":p"))
-      )
-      nio.fn.bufload(bufnr)
-      return util.open_buf(bufnr, line, column)
-    end)()
-
-    if opened and set_frame then
-      client.session._frame_set(frame)
+  local function open(frame)
+    local win = nio.api.nvim_get_current_win()
+    local source_win = util.select_source_win()
+    if source_win and win ~= source_win then
+      nio.api.nvim_set_current_win(source_win)
     end
+    client.session._frame_set(frame)
   end
 
   ---@param frame dapui.types.StackFrame
