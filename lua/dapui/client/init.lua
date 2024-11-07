@@ -116,9 +116,7 @@ local function create_client(session_factory, breakpoints)
     request_seqs[session][session.seq] = true
     session:request(command, args, function(...)
       request_seqs[session][session.seq] = nil
-      if cb then
-        cb(...)
-      end
+      cb(...)
     end)
   end, 3, { strict = false })
 
@@ -130,7 +128,7 @@ local function create_client(session_factory, breakpoints)
         local diff = vim.loop.now() - start
         if err then
           error(Error(err, { command = command, args = args }))
-        elseif body and body.error then
+        elseif body.error then
           error(Error(body.err, { command = command, args = args }))
         end
         return body

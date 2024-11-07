@@ -162,6 +162,44 @@ function M.select_win()
   return windows[index]
 end
 
+function M.select_source_win()
+  local windows = vim.tbl_filter(function(win)
+    if api.nvim_win_get_config(win).relative ~= "" then
+      return false
+    end
+    local buf = api.nvim_win_get_buf(win)
+    local ok, is_source_buf = pcall(vim.api.nvim_buf_get_var, buf, "dap_source_buf")
+    return ok and is_source_buf
+  end, api.nvim_tabpage_list_wins(0))
+  if #windows < 2 then
+    return windows[1]
+  end
+end
+
+function M.open_source_buf(bufnr, line, column)
+  local function set_win_pos(win)
+    if line then
+      api.nvim_win_set_cursor(win, { line, column })
+    end
+    pcall(api.nvim_set_current_win, win)
+  end
+
+  for _, win in pairs(api.nvim_tabpage_list_wins(0)) do
+    if api.nvim_win_get_buf(win) == bufnr then
+      set_win_pos(win)
+      return true
+    end
+  end
+
+  local success, win = pcall(M.select_source_win)
+  if not success or not win then
+    return false
+  end
+  api.nvim_win_set_buf(win, bufnr)
+  set_win_pos(win)
+  return true
+end
+
 function M.open_buf(bufnr, line, column)
   local function set_win_pos(win)
     if line then
